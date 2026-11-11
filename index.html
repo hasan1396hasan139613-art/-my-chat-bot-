@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHABAZI AI</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Tahoma, sans-serif;
+  background: #10172a;
+  color: white;
+}
+header {
+  background: #202c49;
+  padding: 22px;
+  text-align: center;
+  font-size: 25px;
+  font-weight: bold;
+}
+main {
+  max-width: 800px;
+  margin: 25px auto;
+  padding: 15px;
+}
+#messages {
+  height: 55vh;
+  overflow-y: auto;
+  background: #19243d;
+  padding: 15px;
+  border-radius: 15px;
+}
+.message {
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 12px;
+  line-height: 2;
+  white-space: pre-wrap;
+}
+.user { background: #34496f; }
+.bot { background: #293653; }
+input {
+  width: 65%;
+  padding: 14px;
+  border-radius: 10px;
+  border: 0;
+  font-size: 16px;
+}
+button {
+  padding: 13px;
+  border: 0;
+  border-radius: 10px;
+  background: #7665ff;
+  color: white;
+  cursor: pointer;
+  margin: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<header>✨ SHABAZI AI</header>
+
+<main>
+  <div id="messages">
+    <div class="message bot">
+      سلام! من دستیار هوشمند SHABAZI AI هستم.
+      چطور می‌توانم کمکت کنم؟
+    </div>
+  </div>
+
+  <br>
+
+  <input id="message" placeholder="پیامت را بنویس...">
+  <button onclick="sendMessage()">ارسال</button>
+
+  <br><br>
+
+  <button onclick="startVoice()">🎤 صحبت با من</button>
+  <button onclick="stopVoice()">⏹ توقف میکروفون</button>
+  <button onclick="speakAnswer()">🔊 پخش پاسخ</button>
+  <button onclick="stopSpeech()">قطع صدا</button>
+
+</main>
+
+<script>
+let lastAnswer = "";
+
+async function sendMessage(text) {
+  const input = document.getElementById("message");
+  const message = (text || input.value).trim();
+
+  if (!message) return;
+
+  addMessage(message, "user");
+  input.value = "";
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.error);
+
+    lastAnswer = data.reply;
+    addMessage(lastAnswer, "bot");
+
+  } catch (error) {
+    addMessage(error.message || "خطا در ارتباط با سرور", "bot");
+  }
+}
+
+function addMessage(text, type) {
+  const div = document.createElement("div");
+  div.className = "message " + type;
+  div.textContent = text;
+  document.getElementById("messages").appendChild(div);
+  div.scrollIntoView({ behavior: "smooth" });
+}
+
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let recognition;
+
+function startVoice() {
+  if (!SpeechRecognition) {
+    alert("لطفاً از Chrome یا Edge استفاده کن.");
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "fa-IR";
+  recognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    sendMessage(text);
+  };
+
+  recognition.onerror = function() {
+    alert("میکروفون را بررسی کن و اجازه دسترسی بده.");
+  };
+
+  recognition.start();
+}
+
+function stopVoice() {
+  if (recognition) recognition.stop();
+}
+
+function speakAnswer() {
+  if (!lastAnswer) return;
+
+  speechSynthesis.cancel();
+
+  const speech = new SpeechSynthesisUtterance(lastAnswer);
+  speech.lang = "fa-IR";
+  speech.rate = 0.9;
+
+  speechSynthesis.speak(speech);
+}
+
+function stopSpeech() {
+  speechSynthesis.cancel();
+}
+</script>
+
+</body>
+</html>
